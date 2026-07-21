@@ -1,0 +1,123 @@
+##############################################################################
+# Snowflake CICD — consumes the database module from snowflake-terraform
+#
+# Secrets required (Settings → Secrets → Actions):
+#   SNOWFLAKE_ACCOUNT   e.g.  ABC12345.us-east-1
+#   SNOWFLAKE_USER      e.g.  MYUSERNAME
+#   SNOWFLAKE_PASSWORD  e.g.  MyPassword123!
+##############################################################################
+
+name: Snowflake Deploy
+
+on:
+  pull_request:
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to run"
+        required: true
+        type: choice
+        options: [plan, apply, destroy]
+        default: plan
+
+jobs:
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      # Needed so Terraform can git-clone the module from snowflake-terraform
+      - name: Configure git auth
+        run: git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - run: terraform init
+
+      - name: Terraform Plan
+        run: |
+          terraform plan \
+            -var="snowflake_account=${{ secrets.SNOWFLAKE_ACCOUNT }}" \
+            -var="snowflake_user=${{ secrets.SNOWFLAKE_USER }}" \
+            -var="snowflake_password=${{ secrets.SNOWFLAKE_PASSWORD }}" \
+            -no-color
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Configure git auth
+        run: git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: terraform.tfstate
+          key: tfstate-${{ github.ref_name }}
+          restore-keys: tfstate-
+
+      - run: terraform init
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var="snowflake_account=${{ secrets.SNOWFLAKE_ACCOUNT }}" \
+            -var="snowflake_user=${{ secrets.SNOWFLAKE_USER }}" \
+            -var="snowflake_password=${{ secrets.SNOWFLAKE_PASSWORD }}"
+
+      - name: Save state
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: terraform.tfstate
+          key: tfstate-${{ github.ref_name }}
+
+      - run: terraform output
+
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Configure git auth
+        run: git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: terraform.tfstate
+          key: tfstate-${{ github.ref_name }}
+          restore-keys: tfstate-
+
+      - run: terraform init
+
+      - name: Terraform Destroy
+        run: |
+          terraform destroy -auto-approve \
+            -var="snowflake_account=${{ secrets.SNOWFLAKE_ACCOUNT }}" \
+            -var="snowflake_user=${{ secrets.SNOWFLAKE_USER }}" \
+            -var="snowflake_password=${{ secrets.SNOWFLAKE_PASSWORD }}"
