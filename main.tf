@@ -17,12 +17,12 @@ provider "snowflake" {
   role              = "SYSADMIN"
 }
 
-module "learning_db" {
+module "db_details" {
   source = "git::https://github.com/smamidipalli009/snowflake-terraform.git//modules/database?ref=v1.0.0"
 
   name = "LEARNING_DB"
 }
 
 output "database_name" {
-  value = module.learning_db.database_name
+  value = module.db_details.database_name
 }
