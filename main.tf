@@ -20,7 +20,7 @@ provider "snowflake" {
 module "db_details" {
   source = "git::https://github.com/smamidipalli009/snowflake-terraform.git//modules/database?ref=v1.0.0"
 
-  name = "LEARNING_DB"
+  name = "SW_DB"
 }
 
 output "database_name" {
