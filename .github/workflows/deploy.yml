@@ -26,7 +26,7 @@ on:
 jobs:
   plan:
     name: Terraform Plan
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
@@ -56,7 +56,7 @@ jobs:
 
   apply:
     name: Terraform Apply
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
 
     steps:
