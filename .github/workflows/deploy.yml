@@ -7,13 +7,11 @@
 #   SNOWFLAKE_PASSWORD  e.g.  MyPassword123!
 #   GH_PAT              Personal Access Token with repo scope
 ##############################################################################
-
 name: Snowflake Deploy
 
 on:
   pull_request:
     branches: [main]
-
   workflow_dispatch:
     inputs:
       action:
@@ -30,15 +28,20 @@ jobs:
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
-
     steps:
+      - name: Pre-clean workspace
+        run: |
+          rm -rf .terraform
+          rm -rf .terraform.lock.hcl
+          rm -f terraform.tfstate terraform.tfstate.backup
+          echo "Workspace clean"
+
       - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.7.5"
 
-      # Inject PAT so git can clone the private module repo
       - name: Configure git auth
         run: |
           git config --global credential.helper store
@@ -54,12 +57,26 @@ jobs:
             -var="snowflake_password=${{ secrets.SNOWFLAKE_PASSWORD }}" \
             -no-color
 
+      - name: Post-clean workspace
+        if: always()
+        run: |
+          rm -rf .terraform
+          rm -f .terraform.lock.hcl
+          rm -f ~/.git-credentials
+          echo "Post-clean done"
+
   apply:
     name: Terraform Apply
     runs-on: self-hosted
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
-
     steps:
+      - name: Pre-clean workspace
+        run: |
+          rm -rf .terraform
+          rm -f .terraform.lock.hcl
+          rm -f terraform.tfstate terraform.tfstate.backup
+          echo "Workspace clean"
+
       - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v3
@@ -96,12 +113,26 @@ jobs:
 
       - run: terraform output
 
+      - name: Post-clean workspace
+        if: always()
+        run: |
+          rm -rf .terraform
+          rm -f .terraform.lock.hcl
+          rm -f ~/.git-credentials
+          echo "Post-clean done"
+
   destroy:
     name: Terraform Destroy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
-
     steps:
+      - name: Pre-clean workspace
+        run: |
+          rm -rf .terraform
+          rm -f .terraform.lock.hcl
+          rm -f terraform.tfstate terraform.tfstate.backup
+          echo "Workspace clean"
+
       - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v3
@@ -128,3 +159,11 @@ jobs:
             -var="snowflake_account=${{ secrets.SNOWFLAKE_ACCOUNT }}" \
             -var="snowflake_user=${{ secrets.SNOWFLAKE_USER }}" \
             -var="snowflake_password=${{ secrets.SNOWFLAKE_PASSWORD }}"
+
+      - name: Post-clean workspace
+        if: always()
+        run: |
+          rm -rf .terraform
+          rm -f .terraform.lock.hcl
+          rm -f ~/.git-credentials
+          echo "Post-clean done"
