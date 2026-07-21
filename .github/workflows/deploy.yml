@@ -39,7 +39,7 @@ jobs:
 
       # Needed so Terraform can git-clone the module from snowflake-terraform
       - name: Configure git auth
-        run: git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
       - run: terraform init
 
@@ -64,7 +64,7 @@ jobs:
           terraform_version: "1.7.5"
 
       - name: Configure git auth
-        run: git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
       - name: Restore state
         uses: actions/cache@v4
