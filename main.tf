@@ -23,7 +23,6 @@ module "learning_db" {
 
   name                 = "LEARNING_DB"
   comment              = "Test database — trial account"
-  data_retention_time_in_days = 0
   create_default_roles = false
 }
 
