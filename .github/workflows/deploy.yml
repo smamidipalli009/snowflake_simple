@@ -5,6 +5,7 @@
 #   SNOWFLAKE_ACCOUNT   e.g.  ABC12345.us-east-1
 #   SNOWFLAKE_USER      e.g.  MYUSERNAME
 #   SNOWFLAKE_PASSWORD  e.g.  MyPassword123!
+#   GH_PAT              Personal Access Token with repo scope
 ##############################################################################
 
 name: Snowflake Deploy
@@ -25,7 +26,7 @@ on:
 jobs:
   plan:
     name: Terraform Plan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
@@ -37,9 +38,11 @@ jobs:
         with:
           terraform_version: "1.7.5"
 
-      # Needed so Terraform can git-clone the module from snowflake-terraform
+      # Inject PAT so git can clone the private module repo
       - name: Configure git auth
-        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+        run: |
+          git config --global credential.helper store
+          echo "https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com" > ~/.git-credentials
 
       - run: terraform init
 
@@ -53,7 +56,7 @@ jobs:
 
   apply:
     name: Terraform Apply
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
 
     steps:
@@ -64,7 +67,9 @@ jobs:
           terraform_version: "1.7.5"
 
       - name: Configure git auth
-        run: git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+        run: |
+          git config --global credential.helper store
+          echo "https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com" > ~/.git-credentials
 
       - name: Restore state
         uses: actions/cache@v4
@@ -93,7 +98,7 @@ jobs:
 
   destroy:
     name: Terraform Destroy
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
 
     steps:
@@ -104,7 +109,9 @@ jobs:
           terraform_version: "1.7.5"
 
       - name: Configure git auth
-        run: git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        run: |
+          git config --global credential.helper store
+          echo "https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com" > ~/.git-credentials
 
       - name: Restore state
         uses: actions/cache@v4
